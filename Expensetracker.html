@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            border: none;
+            background: none;
+            font-size: 16px;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            color: #667eea;
+            background: white;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .card .amount {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 5px;
+        }
+
+        .category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .type-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .type-toggle button {
+            flex: 1;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filters select {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .income-row {
+            background: #d4edda !important;
+        }
+
+        .expense-row {
+            background: #f8d7da !important;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Expense Tracker</h1>
+            <p>Track your income and expenses efficiently</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('add')">Add Transaction</button>
+            <button class="tab" onclick="switchTab('view')">View Transactions</button>
+            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab" onclick="switchTab('categories')">Manage Categories</button>
+        </div>
+
+        <!-- Add Transaction Tab -->
+        <div id="add" class="tab-content active">
+            <div class="form-section">
+                <h2 style="margin-bottom: 20px;">Add New Transaction</h2>
+                
+                <div class="type-toggle">
+                    <button class="btn btn-danger" id="expenseBtn" onclick="setTransactionType('expense')">Expense</button>
+                    <button class="btn btn-success" id="incomeBtn" onclick="setTransactionType('income')">Income</button>
+                </div>
+
+                <form id="transactionForm">
+                    <div class="form-group">
+                        <label for="date">Date *</label>
+                        <input type="date" id="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Amount (₹) *</label>
+                        <input type="number" id="amount" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description *</label>
+                        <input type="text" id="description" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category *</label>
+                        <select id="category" required>
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Add Transaction</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- View Transactions Tab -->
+        <div id="view" class="tab-content">
+            <div class="summary-cards">
+                <div class="card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    <h3>Total Income</h3>
+                    <div class="amount" id="totalIncome">₹0.00</div>
+                </div>
+                <div class="card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                    <h3>Total Expenses</h3>
+                    <div class="amount" id="totalExpense">₹0.00</div>
+                </div>
+                <div class="card">
+                    <h3>Balance</h3>
+                    <div class="amount" id="balance">₹0.00</div>
+                </div>
+            </div>
+
+            <div class="filters">
+                <select id="filterType" onchange="filterTransactions()">
+                    <option value="all">All Transactions</option>
+                    <option value="income">Income Only</option>
+                    <option value="expense">Expense Only</option>
+                </select>
+                <select id="filterCategory" onchange="filterTransactions()">
+                    <option value="all">All Categories</option>
+                </select>
+                <input type="month" id="filterMonth" onchange="filterTransactions()">
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="transactionsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Analytics Dashboard</h2>
+            
+            <div class="filters">
+                <select id="analyticsView" onchange="changeAnalyticsView()">
+                    <option value="monthly">Monthly View</option>
+                    <option value="daily">Daily View</option>
+                    <option value="yearly">Yearly View</option>
+                </select>
+                <select id="analyticsYear" onchange="updateCharts()">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                    <option value="2023">2023</option>
+                </select>
+                <select id="analyticsMonth" onchange="updateCharts()" style="display: none;">
+                    <option value="01">January</option>
+                    <option value="02">February</option>
+                    <option value="03">March</option>
+                    <option value="04">April</option>
+                    <option value="05">May</option>
+                    <option value="06">June</option>
+                    <option value="07">July</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                <select id="analyticsType" onchange="updateCharts()">
+                    <option value="expense">Expenses</option>
+                    <option value="income">Income</option>
+                    <option value="both">Both</option>
+                </select>
+            </div>
+
+            <div class="chart-container">
+                <h3 id="chartTitle">Monthly Breakdown</h3>
+                <canvas id="monthlyChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>Category Breakdown</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+
+            <div class="chart-container" id="summaryTable">
+                <h3 id="summaryTableTitle">Summary</h3>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead id="summaryTableHead">
+                        </thead>
+                        <tbody id="summaryTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Categories Tab -->
+        <div id="categories" class="tab-content">
+            <div class="form-section">
+                <h2 style="margin-bottom: 20px;">Add New Category</h2>
+                
+                <div class="type-toggle">
+                    <button class="btn btn-danger" id="catExpenseBtn" onclick="setCategoryType('expense')">Expense Category</button>
+                    <button class="btn btn-success" id="catIncomeBtn" onclick="setCategoryType('income')">Income Category</button>
+                </div>
+
+                <form id="categoryForm">
+                    <div class="form-group">
+                        <label for="newCategory">Category Name *</label>
+                        <input type="text" id="newCategory" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Category</button>
+                </form>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3>Expense Categories</h3>
+                <div class="category-list" id="expenseCategoriesList"></div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3>Income Categories</h3>
+                <div class="category-list" id="incomeCategoriesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize data
+        let transactions = [];
+        let categories = {
+            expense: ['Course', 'Travelling', 'Food', 'Makeup', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Other'],
+            income: ['Salary', 'Freelance', 'Business', 'Investment', 'Gift', 'Other']
+        };
+
+        let currentTransactionType = 'expense';
+        let currentCategoryType = 'expense';
+        let editingId = null;
+
+        // Load data from localStorage
+        function loadData() {
+            const savedTransactions = localStorage.getItem('transactions');
+            const savedCategories = localStorage.getItem('categories');
+            
+            if (savedTransactions) {
+                transactions = JSON.parse(savedTransactions);
+            } else {
+                // Load initial data
+                transactions = [
+                    {id: Date.now() + 1, date: '2026-01-03', amount: 10000, description: 'Make Up Course Fee', category: 'Course', type: 'expense'},
+                    {id: Date.now() + 2, date: '2026-02-03', amount: 20000, description: 'Make Up Course Fee', category: 'Course', type: 'expense'},
+                    {id: Date.now() + 3, date: '2026-02-03', amount: 138, description: 'Make Up Course Traveling', category: 'Travelling', type: 'expense'},
+                    {id: Date.now() + 4, date: '2026-02-03', amount: 40, description: 'Make Up Course Bus Fare', category: 'Travelling', type: 'expense'},
+                    {id: Date.now() + 5, date: '2026-02-03', amount: 5, description: 'Course Application Xerox', category: 'Course', type: 'expense'},
+                    {id: Date.now() + 6, date: '2026-02-03', amount: 20, description: 'Tea', category: 'Food', type: 'expense'}
+                ];
+            }
+            
+            if (savedCategories) {
+                categories = JSON.parse(savedCategories);
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            localStorage.setItem('categories', JSON.stringify(categories));
+        }
+
+        // Initialize
+        function init() {
+            loadData();
+            setTransactionType('expense');
+            setCategoryType('expense');
+            updateCategoryDropdowns();
+            updateCategoryLists();
+            displayTransactions();
+            updateSummary();
+            updateCharts();
+            
+            // Set today's date
+            document.getElementById('date').valueAsDate = new Date();
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'analytics') {
+                updateCharts();
+            }
+        }
+
+        // Set transaction type
+        function setTransactionType(type) {
+            currentTransactionType = type;
+            document.getElementById('expenseBtn').className = type === 'expense' ? 'btn btn-danger' : 'btn';
+            document.getElementById('incomeBtn').className = type === 'income' ? 'btn btn-success' : 'btn';
+            updateCategoryDropdowns();
+        }
+
+        // Set category type
+        function setCategoryType(type) {
+            currentCategoryType = type;
+            document.getElementById('catExpenseBtn').className = type === 'expense' ? 'btn btn-danger' : 'btn';
+            document.getElementById('catIncomeBtn').className = type === 'income' ? 'btn btn-success' : 'btn';
+        }
+
+        // Update category dropdowns
+        function updateCategoryDropdowns() {
+            const categorySelect = document.getElementById('category');
+            const filterCategorySelect = document.getElementById('filterCategory');
+            
+            categorySelect.innerHTML = '<option value="">Select Category</option>';
+            filterCategorySelect.innerHTML = '<option value="all">All Categories</option>';
+            
+            categories[currentTransactionType].forEach(cat => {
+                categorySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+            
+            // For filter, show all categories
+            [...categories.expense, ...categories.income].forEach(cat => {
+                filterCategorySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+        }
+
+        // Update category lists
+        function updateCategoryLists() {
+            const expenseList = document.getElementById('expenseCategoriesList');
+            const incomeList = document.getElementById('incomeCategoriesList');
+            
+            expenseList.innerHTML = categories.expense.map(cat => 
+                `<span class="category-badge" style="background: #dc3545;">${cat} 
+                <button onclick="deleteCategory('expense', '${cat}')" style="border: none; background: none; color: white; cursor: pointer; margin-left: 5px;">×</button>
+                </span>`
+            ).join('');
+            
+            incomeList.innerHTML = categories.income.map(cat => 
+                `<span class="categor
