@@ -578,4 +578,485 @@
             ).join('');
             
             incomeList.innerHTML = categories.income.map(cat => 
-                `<span class="categor
+                `<span class="category-badge" style="background: #28a745;">${cat}
+                <button onclick="deleteCategory('income', '${cat}')" style="border: none; background: none; color: white; cursor: pointer; margin-left: 5px;">×</button>
+                </span>`
+            ).join('');
+        }
+
+        // Add category
+        document.getElementById('categoryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const categoryName = document.getElementById('newCategory').value.trim();
+            
+            if (categoryName && !categories[currentCategoryType].includes(categoryName)) {
+                categories[currentCategoryType].push(categoryName);
+                saveData();
+                updateCategoryDropdowns();
+                updateCategoryLists();
+                document.getElementById('newCategory').value = '';
+                alert('Category added successfully!');
+            } else {
+                alert('Category already exists or invalid name!');
+            }
+        });
+
+        // Delete category
+        function deleteCategory(type, categoryName) {
+            if (confirm(`Delete category "${categoryName}"?`)) {
+                categories[type] = categories[type].filter(cat => cat !== categoryName);
+                saveData();
+                updateCategoryDropdowns();
+                updateCategoryLists();
+            }
+        }
+
+        // Add/Edit transaction
+        document.getElementById('transactionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const transaction = {
+                id: editingId || Date.now(),
+                date: document.getElementById('date').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                description: document.getElementById('description').value,
+                category: document.getElementById('category').value,
+                type: currentTransactionType
+            };
+            
+            if (editingId) {
+                const index = transactions.findIndex(t => t.id === editingId);
+                transactions[index] = transaction;
+                editingId = null;
+            } else {
+                transactions.push(transaction);
+            }
+            
+            saveData();
+            displayTransactions();
+            updateSummary();
+            this.reset();
+            document.getElementById('date').valueAsDate = new Date();
+            alert('Transaction saved successfully!');
+        });
+
+        // Display transactions
+        function displayTransactions() {
+            const tbody = document.getElementById('transactionsBody');
+            const filterType = document.getElementById('filterType').value;
+            const filterCategory = document.getElementById('filterCategory').value;
+            const filterMonth = document.getElementById('filterMonth').value;
+            
+            let filtered = transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            if (filterType !== 'all') {
+                filtered = filtered.filter(t => t.type === filterType);
+            }
+            
+            if (filterCategory !== 'all') {
+                filtered = filtered.filter(t => t.category === filterCategory);
+            }
+            
+            if (filterMonth) {
+                filtered = filtered.filter(t => t.date.substring(0, 7) === filterMonth);
+            }
+            
+            tbody.innerHTML = filtered.map(t => `
+                <tr class="${t.type}-row">
+                    <td>${new Date(t.date).toLocaleDateString('en-IN')}</td>
+                    <td><strong>${t.type.toUpperCase()}</strong></td>
+                    <td>₹${t.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td>${t.description}</td>
+                    <td><span class="category-badge" style="background: ${t.type === 'income' ? '#28a745' : '#dc3545'}">${t.category}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-warning" onclick="editTransaction(${t.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteTransaction(${t.id})">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Filter transactions
+        function filterTransactions() {
+            displayTransactions();
+        }
+
+        // Edit transaction
+        function editTransaction(id) {
+            const transaction = transactions.find(t => t.id === id);
+            if (transaction) {
+                document.getElementById('date').value = transaction.date;
+                document.getElementById('amount').value = transaction.amount;
+                document.getElementById('description').value = transaction.description;
+                setTransactionType(transaction.type);
+                document.getElementById('category').value = transaction.category;
+                editingId = id;
+                switchTab('add');
+                document.querySelector('.tab').click();
+            }
+        }
+
+        // Delete transaction
+        function deleteTransaction(id) {
+            if (confirm('Delete this transaction?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveData();
+                displayTransactions();
+                updateSummary();
+            }
+        }
+
+        // Update summary
+        function updateSummary() {
+            const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const balance = totalIncome - totalExpense;
+            
+            document.getElementById('totalIncome').textContent = '₹' + totalIncome.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('totalExpense').textContent = '₹' + totalExpense.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('balance').textContent = '₹' + balance.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        }
+
+        // Charts
+        let monthlyChart, categoryChart;
+        let currentView = 'monthly';
+
+        function changeAnalyticsView() {
+            currentView = document.getElementById('analyticsView').value;
+            const monthSelector = document.getElementById('analyticsMonth');
+            
+            if (currentView === 'daily') {
+                monthSelector.style.display = 'block';
+                // Set to current month
+                const currentMonth = new Date().toISOString().substring(5, 7);
+                monthSelector.value = currentMonth;
+            } else {
+                monthSelector.style.display = 'none';
+            }
+            
+            updateCharts();
+        }
+
+        function updateCharts() {
+            const year = document.getElementById('analyticsYear').value;
+            const type = document.getElementById('analyticsType').value;
+            const view = currentView;
+            
+            let chartData, chartTitle;
+            
+            if (view === 'daily') {
+                const month = document.getElementById('analyticsMonth').value;
+                chartData = getDailyData(year, month, type);
+                chartTitle = `Daily Breakdown - ${getMonthName(month)} ${year}`;
+            } else if (view === 'monthly') {
+                chartData = getMonthlyData(year, type);
+                chartTitle = `Monthly Breakdown - ${year}`;
+            } else if (view === 'yearly') {
+                chartData = getYearlyData(type);
+                chartTitle = 'Yearly Breakdown';
+            }
+            
+            document.getElementById('chartTitle').textContent = chartTitle;
+            
+            if (monthlyChart) monthlyChart.destroy();
+            
+            const ctx1 = document.getElementById('monthlyChart').getContext('2d');
+            monthlyChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: type === 'both' ? [
+                        {
+                            label: 'Income',
+                            data: chartData.income,
+                            backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Expenses',
+                            data: chartData.expense,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            borderWidth: 2
+                        }
+                    ] : [{
+                        label: type === 'income' ? 'Income' : 'Expenses',
+                        data: chartData[type],
+                        backgroundColor: type === 'income' ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)',
+                        borderColor: type === 'income' ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Category chart
+            const categoryData = getCategoryData(year, type, view);
+            
+            if (categoryChart) categoryChart.destroy();
+            
+            const ctx2 = document.getElementById('categoryChart').getContext('2d');
+            categoryChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryData.labels,
+                    datasets: [{
+                        data: categoryData.values,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ₹' + context.parsed.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Update summary table
+            updateSummaryTable();
+        }
+
+        function getDailyData(year, month, type) {
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const data = {
+                income: Array(daysInMonth).fill(0),
+                expense: Array(daysInMonth).fill(0),
+                labels: []
+            };
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                data.labels.push(i.toString());
+            }
+            
+            transactions.forEach(t => {
+                if (t.date.startsWith(`${year}-${month}`)) {
+                    const day = parseInt(t.date.split('-')[2]) - 1;
+                    data[t.type][day] += t.amount;
+                }
+            });
+            
+            return data;
+        }
+
+        function getMonthlyData(year, type) {
+            const data = { 
+                income: Array(12).fill(0), 
+                expense: Array(12).fill(0),
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            };
+            
+            transactions.forEach(t => {
+                if (t.date.startsWith(year)) {
+                    const month = parseInt(t.date.split('-')[1]) - 1;
+                    data[t.type][month] += t.amount;
+                }
+            });
+            
+            return data;
+        }
+
+        function getYearlyData(type) {
+            const years = [...new Set(transactions.map(t => t.date.substring(0, 4)))].sort();
+            const data = {
+                income: [],
+                expense: [],
+                labels: years
+            };
+            
+            years.forEach(year => {
+                let incomeTotal = 0;
+                let expenseTotal = 0;
+                
+                transactions.forEach(t => {
+                    if (t.date.startsWith(year)) {
+                        if (t.type === 'income') incomeTotal += t.amount;
+                        else expenseTotal += t.amount;
+                    }
+                });
+                
+                data.income.push(incomeTotal);
+                data.expense.push(expenseTotal);
+            });
+            
+            return data;
+        }
+
+        function getCategoryData(year, type, view) {
+            const data = {};
+            const types = type === 'both' ? ['income', 'expense'] : [type];
+            
+            let filterFn;
+            if (view === 'daily') {
+                const month = document.getElementById('analyticsMonth').value;
+                filterFn = t => t.date.startsWith(`${year}-${month}`);
+            } else if (view === 'monthly') {
+                filterFn = t => t.date.startsWith(year);
+            } else {
+                filterFn = () => true;
+            }
+            
+            transactions.forEach(t => {
+                if (filterFn(t) && types.includes(t.type)) {
+                    data[t.category] = (data[t.category] || 0) + t.amount;
+                }
+            });
+            
+            return {
+                labels: Object.keys(data),
+                values: Object.values(data)
+            };
+        }
+
+        function updateSummaryTable() {
+            const year = document.getElementById('analyticsYear').value;
+            const type = document.getElementById('analyticsType').value;
+            const view = currentView;
+            
+            const tableHead = document.getElementById('summaryTableHead');
+            const tableBody = document.getElementById('summaryTableBody');
+            const tableTitle = document.getElementById('summaryTableTitle');
+            
+            if (view === 'daily') {
+                const month = document.getElementById('analyticsMonth').value;
+                tableTitle.textContent = `Daily Summary - ${getMonthName(month)} ${year}`;
+                
+                tableHead.innerHTML = `
+                    <tr>
+                        <th>Date</th>
+                        ${type === 'both' || type === 'income' ? '<th>Income</th>' : ''}
+                        ${type === 'both' || type === 'expense' ? '<th>Expenses</th>' : ''}
+                        ${type === 'both' ? '<th>Balance</th>' : ''}
+                    </tr>
+                `;
+                
+                const daysInMonth = new Date(year, month, 0).getDate();
+                let rows = '';
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = `${year}-${month}-${day.toString().padStart(2, '0')}`;
+                    const dayTransactions = transactions.filter(t => t.date === dateStr);
+                    
+                    const income = dayTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                    const expense = dayTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                    const balance = income - expense;
+                    
+                    if (income > 0 || expense > 0) {
+                        rows += `<tr>
+                            <td>${day} ${getMonthName(month)}</td>
+                            ${type === 'both' || type === 'income' ? `<td style="color: #28a745;">₹${income.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                            ${type === 'both' || type === 'expense' ? `<td style="color: #dc3545;">₹${expense.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                            ${type === 'both' ? `<td style="color: ${balance >= 0 ? '#28a745' : '#dc3545'}; font-weight: bold;">₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                        </tr>`;
+                    }
+                }
+                
+                tableBody.innerHTML = rows || '<tr><td colspan="4" style="text-align: center;">No transactions found</td></tr>';
+                
+            } else if (view === 'monthly') {
+                tableTitle.textContent = `Monthly Summary - ${year}`;
+                
+                tableHead.innerHTML = `
+                    <tr>
+                        <th>Month</th>
+                        ${type === 'both' || type === 'income' ? '<th>Income</th>' : ''}
+                        ${type === 'both' || type === 'expense' ? '<th>Expenses</th>' : ''}
+                        ${type === 'both' ? '<th>Balance</th>' : ''}
+                    </tr>
+                `;
+                
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                let rows = '';
+                
+                for (let m = 0; m < 12; m++) {
+                    const monthStr = (m + 1).toString().padStart(2, '0');
+                    const monthTransactions = transactions.filter(t => t.date.startsWith(`${year}-${monthStr}`));
+                    
+                    const income = monthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                    const expense = monthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                    const balance = income - expense;
+                    
+                    if (income > 0 || expense > 0) {
+                        rows += `<tr>
+                            <td>${months[m]}</td>
+                            ${type === 'both' || type === 'income' ? `<td style="color: #28a745;">₹${income.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                            ${type === 'both' || type === 'expense' ? `<td style="color: #dc3545;">₹${expense.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                            ${type === 'both' ? `<td style="color: ${balance >= 0 ? '#28a745' : '#dc3545'}; font-weight: bold;">₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                        </tr>`;
+                    }
+                }
+                
+                tableBody.innerHTML = rows || '<tr><td colspan="4" style="text-align: center;">No transactions found</td></tr>';
+                
+            } else if (view === 'yearly') {
+                tableTitle.textContent = 'Yearly Summary';
+                
+                tableHead.innerHTML = `
+                    <tr>
+                        <th>Year</th>
+                        ${type === 'both' || type === 'income' ? '<th>Income</th>' : ''}
+                        ${type === 'both' || type === 'expense' ? '<th>Expenses</th>' : ''}
+                        ${type === 'both' ? '<th>Balance</th>' : ''}
+                    </tr>
+                `;
+                
+                const years = [...new Set(transactions.map(t => t.date.substring(0, 4)))].sort().reverse();
+                let rows = '';
+                
+                years.forEach(yr => {
+                    const yearTransactions = transactions.filter(t => t.date.startsWith(yr));
+                    
+                    const income = yearTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                    const expense = yearTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                    const balance = income - expense;
+                    
+                    rows += `<tr>
+                        <td>${yr}</td>
+                        ${type === 'both' || type === 'income' ? `<td style="color: #28a745;">₹${income.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                        ${type === 'both' || type === 'expense' ? `<td style="color: #dc3545;">₹${expense.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                        ${type === 'both' ? `<td style="color: ${balance >= 0 ? '#28a745' : '#dc3545'}; font-weight: bold;">₹${balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>` : ''}
+                    </tr>`;
+                });
+                
+                tableBody.innerHTML = rows || '<tr><td colspan="4" style="text-align: center;">No transactions found</td></tr>';
+            }
+        }
+
+        function getMonthName(monthNum) {
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+            return months[parseInt(monthNum) - 1];
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
