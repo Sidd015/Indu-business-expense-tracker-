@@ -13,19 +13,10 @@ class Transaction {
   }
 }
 
-// Budget Class
-class Budget {
-  constructor(category, limit) {
-    this.category = category;
-    this.limit = parseFloat(limit);
-  }
-}
-
 // ExpenseManager Class
 class ExpenseManager {
   constructor() {
     this.transactions = [];
-    this.budgets = [];
   }
 
   addTransaction(transaction) {
