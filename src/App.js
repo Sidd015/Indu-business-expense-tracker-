@@ -110,7 +110,7 @@ const ExpenseTracker = () => {
   });
 
   const categories = {
-    expense: ['Food', 'Transportation', 'Shopping', 'Entertainment', 'Bills', 'Healthcare', 'Education', 'Other'],
+    expense: ['Food', 'Traveling', 'Shopping', 'Entertainment', 'Bills', 'Healthcare', 'Education', 'Other'],
     income: ['Salary', 'Freelance', 'Investment', 'Gift', 'Other']
   };
 
