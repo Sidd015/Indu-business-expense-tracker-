@@ -116,7 +116,7 @@ const ExpenseTracker = () => {
 
   const categoryColors = {
     Food: '#FF6B6B',
-    Transportation: '#4ECDC4',
+    Traveling: '#4ECDC4',
     Shopping: '#FFE66D',
     Entertainment: '#95E1D3',
     Bills: '#F38181',
